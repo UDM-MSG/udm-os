@@ -10,10 +10,6 @@
 - **SDK (Python)** (sdk/udm_sdk.py)
 - **Dashboards** (if provided)
 
-**What this does NOT include**
-- No secrets or tokens
-- No `.udm/` state, receipts, delivery logs, downloads
-- No personal configs (actors.json, config.yaml)
 
 ## Quick Start
 
