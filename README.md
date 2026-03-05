@@ -1,4 +1,4 @@
-﻿# UDMâ€‘OS (Open Source Bundle)
+﻿# UDM-OS (Open Source Bundle)
 
 **What this includes**
 - **UDM Core** (S/C/P â†’ Hysteresis â†’ State)
