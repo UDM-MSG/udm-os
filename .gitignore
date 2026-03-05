@@ -1,0 +1,19 @@
+﻿# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Local env & secrets
+.env
+.env.*
+UDM_OS/.udm/
+UDM_OS/var/udm/
+UDM_OS/etc/udm/config.yaml
+UDM_OS/etc/udm/actors.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archives
+*.zip

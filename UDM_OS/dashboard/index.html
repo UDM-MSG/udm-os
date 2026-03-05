@@ -1,0 +1,545 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>UDM Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    :root{--bg:#0b1220;--panel:#111827;--soft:#1f2937;--txt:#e5e7eb;--muted:#9ca3af;--ok:#16a34a;--watch:#f59e0b;--closed:#dc2626;--chip:#334155}
+    body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .wrap{padding:18px;max-width:1200px;margin:0 auto}
+    .top{display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    .halo{width:12px;height:12px;border-radius:6px}
+    .pill{padding:4px 8px;border-radius:999px;background:var(--chip);color:#e2e8f0;margin-right:6px}
+    .grid{display:grid;grid-template-columns:360px 1fr 420px;gap:12px}
+    @media (max-width:1000px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--panel);border:1px solid #1f2937;border-radius:10px;padding:12px}
+    .title{font-weight:700;margin-bottom:10px}
+    .small{color:var(--muted);font-size:12px}
+    input,select,textarea{width:100%;background:#0b1220;color:#e5e7eb;border:1px solid #374151;border-radius:8px;padding:8px;outline:none;box-sizing:border-box}
+    button{background:#1e293b;color:#e2e8f0;border:1px solid #334155;padding:8px 10px;border-radius:8px;cursor:pointer}
+    button:hover{background:#0f172a}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .kv{display:grid;grid-template-columns:110px 1fr;gap:8px;align-items:center}
+    .timeline{max-height:520px;overflow:auto;font-family:ui-monospace,Consolas,Menlo,monospace}
+    .item{border-bottom:1px solid #1f2937;padding:8px 0}
+    .item h4{margin:0 0 6px 0}
+    .json{background:#0a0f1c;padding:10px;border-radius:8px;color:#cbd5e1;white-space:pre-wrap;word-break:break-all;max-height:280px;overflow:auto}
+    .chips{display:flex;gap:6px;flex-wrap:wrap}
+    .ok{color:var(--ok)} .watch{color:var(--watch)} .closed{color:var(--closed)}
+    .footer{margin-top:12px;color:#94a3b8}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div id="halo" class="halo" style="background:#dc2626"></div>
+    <strong id="state">CLOSED</strong>
+    <span id="reasons" class="small"></span>
+    <span class="pill" id="S">S: --</span>
+    <span class="pill" id="C">C: --</span>
+    <span class="pill" id="P">P: --</span>
+    <span class="small" id="info"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="title">01234 Quick Pad</div>
+      <textarea id="dsl" rows="3" placeholder="(234)^2 1 say 'Begin now'"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button onclick="runDsl()">Run</button>
+        <button onclick="ex(1)">Example</button>
+        <div class="small">01234: 0=CLOSED, 1=OPEN; 2=S, 3=C, 4=P; (234)^n requires n calm windows.</div>
+      </div>
+
+      <div class="title" style="margin-top:12px">Plan Builder</div>
+      <div class="kv"><label>Objective</label><input id="pb_obj" placeholder="Explain and suggest"/></div>
+      <div class="kv"><label>Steps</label><input id="pb_steps" placeholder="identify_subject,explain_short"/></div>
+      <div class="kv"><label>Tools</label><input id="pb_tools" placeholder="tts.speaker"/></div>
+      <div class="kv"><label>Sources</label><input id="pb_src" placeholder="LOCAL:VISION"/></div>
+      <div class="kv"><label>Time (ms)</label><input id="pb_time" value="1500"/></div>
+      <div class="kv"><label>IO (kB)</label><input id="pb_io" value="64"/></div>
+      <div class="kv"><label>Mask req?</label>
+        <select id="pb_mask"><option>true</option><option>false</option></select></div>
+      <div class="row" style="margin-top:8px"><button onclick="gateRun()">Gate + Run</button></div>
+
+      <div class="title" style="margin-top:12px">Download Manager</div>
+
+      <div class="title" style="margin-top:12px">Apps (WinGet)</div>
+      <div class="kv"><label>Package Id/Name</label><input id="winget_id" placeholder="Microsoft.VisualStudioCode or 'vscode'"/></div>
+      <div class="row" style="margin-top:8px">
+        <button onclick="wingetInstall()">Install</button>
+        <button onclick="wingetList()">List</button>
+        <button onclick="wingetUpgrade()">Upgrade (all or by id)</button>
+      </div>
+
+
+      <div class="title" style="margin-top:12px">VMs (Hyper-V)</div>
+      <div class="kv"><label>VM Name</label><input id="vm_name" placeholder="Windows11-Dev"/></div>
+      <div class="row" style="margin-top:8px">
+        <button onclick="vmStart()">Start</button>
+        <button onclick="vmStop(false)">Stop</button>
+        <button onclick="vmStop(true)">Force Stop</button>
+        <button onclick="vmSnap()">Checkpoint</button>
+        <button onclick="vmList()">List</button>
+      </div>
+
+
+      <div class="title" style="margin-top:12px">Sandbox</div>
+      <div class="kv"><label>WSB (optional)</label><input id="wsb_path" placeholder="C:\path\config.wsb"/></div>
+      <div class="row" style="margin-top:8px">
+        <button onclick="sandboxOpen()">Open Sandbox</button>
+      </div>
+
+
+      <div class="title" style="margin-top:12px">Containers (Docker)</div>
+      <div class="kv"><label>Image</label><input id="docker_image" placeholder="hello-world"/></div>
+      <div class="kv"><label>Args</label><input id="docker_args" placeholder="-it --rm"/></div>
+      <div class="row" style="margin-top:8px">
+        <button onclick="dockerRun()">Run</button>
+      </div>
+
+
+      <div class="title" style="margin-top:12px">Games</div>
+      <div class="kv"><label>DOOM (Classic)</label>
+        <div class="row">
+          <button onclick="installDoom()">Install DOOM</button>
+          <button onclick="playDoom()">Play DOOM</button>
+        </div>
+      </div>
+
+      <div class="kv"><label>URL</label><input id="dl_url" placeholder="https://example.com/installer.exe"/></div>
+      <div class="kv"><label>Save as</label><input id="dl_name" placeholder="installer.exe"/></div>
+      <div class="kv"><label>SHA-256 (opt)</label><input id="dl_sha" placeholder="expectedhex..."/></div>
+      <div class="row" style="margin-top:8px"><button onclick="downloadPlan()">Download (Gated)</button><span class="small">Domains must be allow-listed.</span></div>
+    </div>
+
+    <div class="card">
+      <div class="title">Decision Timeline</div>
+      <div id="timeline" class="timeline"></div>
+    </div>
+
+    <div class="card">
+      <div class="title">Receipt</div>
+      <div id="receipt" class="json small">No receipt loaded.</div>
+      <div class="row" style="margin-top:8px">
+        <button onclick="replay()">Replay Last</button>
+        <button onclick="copyReceipt()">Copy JSON</button>
+      </div>
+
+      <div class="title" style="margin-top:12px">Plan-Gate Report</div>
+      <div id="gate" class="json small">No gate run yet.</div>
+    </div>
+  </div>
+
+  <div class="footer small">UDM Dashboard - Privacy: faces masked ON (for vision flows) - Receipts saved in .udm/receipts</div>
+
+  <div style="margin:12px 0;">
+    <button id="btnAIG">Run AI Governance Hard Test</button>
+    <input id="adm" placeholder="admin token (must match kernel UDM_ADMIN_TOKEN)" style="width:320px; margin-left:8px; background:#0b1220; color:#e5e7eb; border:1px solid #374151; border-radius:8px; padding:8px;" title="Set to the same value used when starting the kernel. If kernel was started without it, restart with: $env:UDM_ADMIN_TOKEN = (.\tools\gen_secret.ps1); .\run_kernel.ps1 -Restart" />
+  </div>
+  <div class="small" style="margin-top:4px; color:#94a3b8;">If you get 403: start the kernel with UDM_ADMIN_TOKEN set, then paste that token here.</div>
+  <pre id="aig_out" style="background:#0a0f1c; padding:12px; border:1px solid #1f2937; border-radius:8px; max-height:360px; overflow:auto; color:#cbd5e1;"></pre>
+  <div class="row" style="margin-top:8px;">
+    <span class="small">Block Test:</span>
+    <input id="block_spec" placeholder="SAFE:3,RISKY:1" style="width:140px; margin-left:4px;" value="SAFE:3,RISKY:1" />
+    <button id="btnBlockTest">Run Block Test</button>
+  </div>
+  <pre id="block_out" style="background:#0a0f1c; padding:12px; border:1px solid #1f2937; border-radius:8px; max-height:200px; overflow:auto; color:#cbd5e1; margin-top:4px;"></pre>
+
+  <div class="card" style="margin-top:12px;">
+    <div class="title">Domain Sims</div>
+    <div class="row" style="margin-bottom:8px;">
+      <label style="width:70px;">Domain</label>
+      <select id="sim_domain" style="width:120px;">
+        <option value="ai">ai</option>
+        <option value="weather">weather</option>
+        <option value="traffic">traffic</option>
+      </select>
+    </div>
+    <div class="row" style="margin-bottom:8px;">
+      <label style="width:70px;">Mode</label>
+      <select id="sim_mode" style="width:120px;"><option value="random">random</option></select>
+    </div>
+    <div class="row" style="margin-bottom:8px;">
+      <label style="width:70px;">Iters</label>
+      <input id="sim_iters" type="number" value="50" style="width:80px;" />
+    </div>
+    <div class="row" style="margin-bottom:8px;">
+      <label style="width:70px;">Seed</label>
+      <input id="sim_seed" type="number" placeholder="(optional)" style="width:100px;" />
+    </div>
+    <div class="row"><button id="btnSimRun">Run Simulation</button></div>
+    <pre id="sim_out" class="json small" style="max-height:280px; margin-top:8px;">Run to see summary + samples.</pre>
+  </div>
+
+  <div class="card" style="margin-top:12px;">
+    <div class="title">AI Governance Tuning Wizard</div>
+    <div class="small" style="margin-bottom:8px;">Use admin token from above. Seed=42, explain on.</div>
+    <div class="row" style="margin-bottom:8px;">
+      <button id="tw_runHard">Run Hard Test (240, explain)</button>
+    </div>
+    <pre id="tw_outHard" class="json small" style="max-height:200px; margin-top:4px;">Run to see result.</pre>
+    <div class="title" style="margin-top:12px;">Live threshold tuning (enter-OPEN)</div>
+    <div class="row" style="margin-bottom:6px;">
+      <label class="small" style="width:70px;">S_open</label><input id="tw_s_open" type="number" step="0.01" placeholder="0.72" style="width:80px;" />
+      <label class="small" style="width:70px;">C_open</label><input id="tw_c_open" type="number" step="0.01" placeholder="0.77" style="width:80px;" />
+      <label class="small" style="width:70px;">P_open</label><input id="tw_p_open" type="number" step="0.01" placeholder="0.28" style="width:80px;" />
+    </div>
+    <div class="row" style="margin-bottom:8px;">
+      <button id="tw_loadHys">Load current</button>
+      <button id="tw_applyHys">Apply thresholds</button>
+    </div>
+    <pre id="tw_outHys" class="json small" style="max-height:120px; margin-top:4px;"></pre>
+    <div class="title" style="margin-top:12px;">Risky AI severity knobs</div>
+    <div class="kv" style="grid-template-columns:140px 80px; margin-bottom:4px;">
+      <span class="small">AIG_RISKY_MIN_ERR</span><input id="tw_k1" type="number" step="0.01" style="width:80px;" />
+      <span class="small">AIG_RISKY_MAX_ERR</span><input id="tw_k2" type="number" step="0.01" style="width:80px;" />
+      <span class="small">AIG_RISKY_MIN_VIOL</span><input id="tw_k3" type="number" step="0.01" style="width:80px;" />
+      <span class="small">AIG_RISKY_MAX_VIOL</span><input id="tw_k4" type="number" step="0.01" style="width:80px;" />
+      <span class="small">AIG_RISKY_MAX_AGR</span><input id="tw_k5" type="number" step="0.01" style="width:80px;" />
+      <span class="small">AIG_RISKY_LAT_MIN</span><input id="tw_k6" type="number" step="0.01" style="width:80px;" />
+      <span class="small">AIG_RISKY_LAT_MAX</span><input id="tw_k7" type="number" step="0.01" style="width:80px;" />
+    </div>
+    <div class="row" style="margin-bottom:8px;"><button id="tw_applyRisky">Apply risky severity</button></div>
+    <pre id="tw_outRisky" class="json small" style="max-height:100px; margin-top:4px;"></pre>
+    <div class="title" style="margin-top:12px;">Emergent autotune (shadow-only)</div>
+    <div class="row" style="margin-bottom:6px;">
+      <label class="small" style="width:50px;">Steps</label><input id="tw_steps" type="number" value="4" style="width:60px;" />
+      <label class="small" style="width:50px;">Iters</label><input id="tw_iters" type="number" value="64" style="width:60px;" />
+      <label class="small" style="width:50px;">Seed</label><input id="tw_seed" type="number" value="42" style="width:60px;" />
+    </div>
+    <div class="row"><button id="tw_doAuto">Run autotune</button></div>
+    <pre id="tw_outAuto" class="json small" style="max-height:100px; margin-top:4px;"></pre>
+  </div>
+</div>
+
+<script>
+const $$ = sel => document.querySelector(sel);
+function setHalo(state) {
+  const h = $$('#halo');
+  if (state === 'OPEN') h.style.background = '#16a34a';
+  else if (state === 'WATCH') h.style.background = '#f59e0b';
+  else h.style.background = '#dc2626';
+}
+function formatAdminResponse(j, res) {
+  if ((res && res.status === 403) || (j && j.error === 'forbidden')) {
+    return '403 Forbidden — Admin token missing or wrong.\n\n' +
+      'In the kernel window (from repo root), run — use a semicolon (;) between the two commands:\n' +
+      '  $env:UDM_ADMIN_TOKEN = (.\\tools\\gen_secret.ps1); .\\run_kernel.ps1 -Restart\n\n' +
+      'Or set your token then start: $env:UDM_ADMIN_TOKEN = \'YOUR_TOKEN\'; .\\run_kernel.ps1 -Restart\n\n' +
+      'Then paste that token in the "admin token" field above and try again.';
+  }
+  return JSON.stringify(j, null, 2);
+}
+function ex(n){ if(n===1) $$('#dsl').value = "(234)^2 1 say 'Begin now'"; }
+async function runDsl(){
+  const line = $$('#dsl').value;
+  const r = await fetch('/ui/run_dsl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({line})});
+  const j = await r.json();
+  updateFromKernel(j);
+}
+async function gateRun(){
+  const plan = {
+    objective: $$('#pb_obj').value || 'Explain and suggest',
+    steps: ($$('#pb_steps').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    tools: ($$('#pb_tools').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    sources: ($$('#pb_src').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    constraints: { mask_required: ($$('#pb_mask').value==='true'), budget: { time_ms: Number($$('#pb_time').value||1500), io_kb: Number($$('#pb_io').value||64)} }
+  };
+  const gate = await (await fetch('/gates/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scope:'planner.safe', plan})})).json();
+  $$('#gate').textContent = JSON.stringify(gate,null,2);
+  if(!gate.pass) return;
+  const k = await (await fetch('/govern',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    signals: { burst:0.08, err_rate:0.02, qps:8 }, context:{scope:'planner.safe',actor_id:'user'}, content:{input_type:'text',text: plan.objective}
+  })})).json();
+  updateFromKernel(k);
+}
+async function downloadPlan(){
+  const url = $$('#dl_url').value.trim();
+  const save_as = $$('#dl_name').value.trim();
+  const sha256 = $$('#dl_sha').value.trim();
+  if(!url || !save_as){ alert('URL and Save as required'); return; }
+  const plan = {
+    objective: "Download file",
+    steps: ["download"],
+    tools: ["download.file"],
+    sources: [],
+    constraints: { mask_required: true, budget: { time_ms: 600000, io_kb: 1048576 }, download: { url, save_as, sha256: sha256 || undefined } }
+  };
+  const gate = await (await fetch('/gates/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scope:'planner.safe', plan})})).json();
+  $$('#gate').textContent = JSON.stringify(gate,null,2);
+  if(!gate.pass){ alert('Gate failed'); return; }
+  const k = await (await fetch('/govern',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    signals:{ burst:0.05, err_rate:0.01, qps:4 }, context:{scope:'planner.safe',actor_id:'user'}, content:{input_type:'text',text:'download.file'}
+  })})).json();
+  updateFromKernel(k);
+  if(k.state!=='OPEN'){ alert('Not OPEN; download not executed'); return; }
+  const act = await (await fetch('/act/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url, save_as, sha256})})).json();
+  alert((act.ok ? 'Downloaded: ' : 'Failed: ') + (act.path || act.detail || act.error || ''));
+  loadTimeline();
+}
+function updateFromKernel(k){
+  if(k.kernel) k=k.kernel;
+  if(k.state){ setHalo(k.state); $$('#state').textContent=k.state; $$('#reasons').textContent=(k.reason_codes||[]).join(', '); }
+  if(k.receipt){
+    const d = k.receipt.receipt_body&&k.receipt.receipt_body.drivers||{};
+    $$('#S').textContent = 'S: '+(d.S!==undefined ? d.S : '--');
+    $$('#C').textContent = 'C: '+(d.C!==undefined ? d.C : '--');
+    $$('#P').textContent = 'P: '+(d.P!==undefined ? d.P : '--');
+    $$('#receipt').textContent = JSON.stringify(k.receipt,null,2);
+  }
+  loadTimeline();
+}
+async function replay(){
+  const r = await fetch('/ui/replay_last',{method:'POST'});
+  const j = await r.json();
+  alert(JSON.stringify(j));
+}
+function copyReceipt(){
+  const t = $$('#receipt').textContent;
+  navigator.clipboard.writeText(t);
+}
+async function loadTimeline(){
+  try{
+    const r = await fetch('/timeline');
+    const j = await r.json();
+    const el = $$('#timeline');
+    el.innerHTML='';
+    (j.items||[]).slice().reverse().forEach(it=>{
+      const div = document.createElement('div');
+      div.className='item';
+      const cls = it.state==='OPEN'?'ok': (it.state==='WATCH'?'watch':'closed');
+      div.innerHTML = '<h4><span class="'+cls+'">'+it.state+'</span> - '+new Date(it.ts).toLocaleTimeString()+' - '+(it.reasons||[]).join(', ')+'</h4><div class="small">Action: '+(it.action&&it.action.summary||'-')+' | Tools: '+(it.action&&it.action.tools||[]).join(', ')+'</div>';
+      el.appendChild(div);
+    });
+    const h = await (await fetch('/health')).json();
+    $$('#info').textContent = 'v'+(h.version||'')+' hys='+(h.hys_depth||'');
+  }catch(e){}
+}
+// Poll every 5s and only when tab/window is visible to cut log noise
+var timelineInterval = 5000;
+setInterval(function(){
+  if (!document.hidden) loadTimeline();
+}, timelineInterval);
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden) loadTimeline();
+});
+loadTimeline();
+
+async function installDoom(){
+  try{
+    const r = await fetch('/games/doom/install',{method:'POST'});
+    const j = await r.json();
+    if(j.ok){ alert('DOOM installed at: ' + j.gzdoom_dir); loadTimeline(); }
+    else{ alert('Install failed: ' + (j.detail || j.where || 'unknown')); }
+  }catch(e){ alert('Install error: ' + e); }
+}
+
+async function playDoom(){
+  try{
+    const r = await fetch('/games/doom/play',{method:'POST'});
+    const j = await r.json();
+    if(j.ok){ alert('Launching DOOM...'); }
+    else{ alert('Play failed: ' + (j.detail || 'unknown')); }
+  }catch(e){ alert('Play error: ' + e); }
+}
+
+
+async function wingetInstall(){
+  const id = document.querySelector('#winget_id').value.trim();
+  if(!id){ alert('Enter a package id or name.'); return; }
+  const r = await fetch('/pkg/winget/install',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+  const j = await r.json(); alert((j.ok?'Installed: ':'Failed: ')+(j.stderr||j.stdout||'')); if(typeof loadTimeline==='function') loadTimeline();
+}
+async function wingetList(){
+  const r = await fetch('/pkg/winget/list');
+  const j = await r.json(); alert(j.stdout||JSON.stringify(j));
+}
+async function wingetUpgrade(){
+  const id = document.querySelector('#winget_id').value.trim();
+  const r = await fetch('/pkg/winget/upgrade',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(id?{id}:{})});
+  const j = await r.json(); alert(j.stdout||JSON.stringify(j));
+}
+async function vmStart(){
+  const name = document.querySelector('#vm_name').value.trim(); if(!name){alert('Enter VM name');return;}
+  const r = await fetch('/vm/hyperv/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+  const j = await r.json(); alert(j.ok?'Started':'Failed: '+(j.stderr||'')); if(typeof loadTimeline==='function') loadTimeline();
+}
+async function vmStop(force){
+  const name = document.querySelector('#vm_name').value.trim(); if(!name){alert('Enter VM name');return;}
+  const r = await fetch('/vm/hyperv/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,force:!!force})});
+  const j = await r.json(); alert(j.ok?'Stopped':'Failed: '+(j.stderr||'')); if(typeof loadTimeline==='function') loadTimeline();
+}
+async function vmSnap(){
+  const name = document.querySelector('#vm_name').value.trim(); if(!name){alert('Enter VM name');return;}
+  const r = await fetch('/vm/hyperv/checkpoint',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,label:'UDM-Checkpoint'})});
+  const j = await r.json(); alert(j.ok?'Checkpoint created':'Failed: '+(j.stderr||'')); if(typeof loadTimeline==='function') loadTimeline();
+}
+async function vmList(){
+  const r = await fetch('/vm/hyperv/list'); const j = await r.json();
+  if(j.ok) alert(JSON.stringify(j.vms,null,2)); else alert('Failed: '+(j.stderr||''));
+}
+async function sandboxOpen(){
+  const wsb = document.querySelector('#wsb_path').value.trim();
+  const r = await fetch('/sandbox/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(wsb?{wsb}:null)});
+  const j = await r.json(); alert(j.ok?'Launching Windows Sandbox':'Failed: '+(j.detail||j.stderr||''));
+}
+async function dockerRun(){
+  const image = document.querySelector('#docker_image').value.trim(); if(!image){alert('Enter image'); return;}
+  const args = (document.querySelector('#docker_args').value||'').trim().split(/\s+/).filter(Boolean);
+  const r = await fetch('/containers/docker/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image,args})});
+  const j = await r.json(); alert(j.ok?'Ran container.':'Failed: '+(j.stderr||'')); if(typeof loadTimeline==='function') loadTimeline();
+}
+
+(function(){
+  const btn = document.getElementById('btnAIG');
+  if (!btn) return;
+  btn.addEventListener('click', async function(){
+    const out = document.getElementById('aig_out');
+    out.textContent = 'Running...';
+    const admin_token = (document.getElementById('adm') || {}).value || '';
+    try {
+      const res = await fetch('/tests/ai_gov/run', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ admin_token: admin_token })
+      });
+      const j = await res.json();
+      out.textContent = formatAdminResponse(j, res);
+    } catch (e) {
+      out.textContent = 'Error: ' + e;
+    }
+  });
+})();
+
+(function(){
+  var btn = document.getElementById('btnBlockTest');
+  if (!btn) return;
+  btn.addEventListener('click', async function(){
+    var out = document.getElementById('block_out');
+    out.textContent = 'Running...';
+    var admin_token = (document.getElementById('adm') || {}).value || '';
+    var blockSpec = (document.getElementById('block_spec') || {}).value || 'SAFE:3,RISKY:1';
+    try {
+      var res = await fetch('/tests/ai_gov/run_blocks', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          admin_token: admin_token,
+          AIG_SCENARIOS: 240,
+          AIG_SEED: 42,
+          AIG_EXPLAIN: 1,
+          AIG_BLOCK_SPEC: blockSpec,
+          AIG_BLOCK_ROUNDS: 0
+        })
+      });
+      var j = await res.json();
+      if ((res && res.status === 403) || (j && j.error === 'forbidden')) {
+        out.textContent = formatAdminResponse(j, res);
+      } else {
+        out.textContent = (j.output || '') + '\n' + JSON.stringify({ ok: j.ok, returncode: j.returncode }, null, 2);
+      }
+    } catch (e) {
+      out.textContent = 'Error: ' + e;
+    }
+  });
+})();
+
+(function(){
+  async function loadSimModes(){
+    try {
+      const res = await fetch('/simulate/list');
+      const j = await res.json();
+      const domSel = document.getElementById('sim_domain');
+      const modeSel = document.getElementById('sim_mode');
+      if (!domSel || !modeSel) return;
+      function repop(domain){
+        modeSel.innerHTML = '';
+        const modes = (j[domain] && j[domain].modes) || ['random'];
+        modes.forEach(function(m){
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = m;
+          modeSel.appendChild(opt);
+        });
+      }
+      domSel.addEventListener('change', function(){ repop(domSel.value); });
+      repop(domSel.value);
+    } catch (e) { console.error('Failed to load sim list', e); }
+  }
+  async function runSim(){
+    const out = document.getElementById('sim_out');
+    if (!out) return;
+    out.textContent = 'Running...';
+    const domain = document.getElementById('sim_domain').value;
+    const mode = document.getElementById('sim_mode').value;
+    const iters = parseInt(document.getElementById('sim_iters').value || '50', 10);
+    const seedEl = document.getElementById('sim_seed').value;
+    const body = { iters: iters, mode: mode };
+    if (seedEl !== '') body.seed = parseInt(seedEl, 10);
+    try {
+      const res = await fetch('/simulate/' + domain, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+      const j = await res.json();
+      out.textContent = JSON.stringify(j, null, 2);
+    } catch (e) {
+      out.textContent = 'Error: ' + e;
+    }
+  }
+  document.getElementById('btnSimRun') && document.getElementById('btnSimRun').addEventListener('click', runSim);
+  loadSimModes();
+})();
+
+(function(){
+  var adm = function(){ return (document.getElementById('adm') || {}).value || ''; };
+  document.getElementById('tw_runHard') && document.getElementById('tw_runHard').addEventListener('click', async function(){
+    var out = document.getElementById('tw_outHard'); out.textContent = 'Running...';
+    try {
+      var r = await fetch('/tests/ai_gov/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ admin_token: adm(), AIG_SEED: 42, AIG_EXPLAIN: 1, AIG_SCENARIOS: 240 }) });
+      var j = await r.json(); out.textContent = formatAdminResponse(j, r);
+    } catch(e) { out.textContent = 'Error: ' + e; }
+  });
+  document.getElementById('tw_loadHys') && document.getElementById('tw_loadHys').addEventListener('click', async function(){
+    var out = document.getElementById('tw_outHys'); out.textContent = 'Loading...';
+    try {
+      var r = await fetch('/admin/hys/update_thresholds', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ admin_token: adm() }) });
+      var j = await r.json();
+      out.textContent = formatAdminResponse(j, r);
+      if (j && j.current) {
+        var q = document.getElementById('tw_s_open'); if(q) q.value = j.current.s_open;
+        q = document.getElementById('tw_c_open'); if(q) q.value = j.current.c_open;
+        q = document.getElementById('tw_p_open'); if(q) q.value = j.current.p_open;
+      }
+    } catch(e) { out.textContent = 'Error: ' + e; }
+  });
+  document.getElementById('tw_applyHys') && document.getElementById('tw_applyHys').addEventListener('click', async function(){
+    var out = document.getElementById('tw_outHys'); out.textContent = 'Applying...';
+    var s = document.getElementById('tw_s_open').value, c = document.getElementById('tw_c_open').value, p = document.getElementById('tw_p_open').value;
+    try {
+      var r = await fetch('/admin/hys/update_thresholds', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ admin_token: adm(), s_open: parseFloat(s), c_open: parseFloat(c), p_open: parseFloat(p) }) });
+      var j = await r.json(); out.textContent = formatAdminResponse(j, r);
+    } catch(e) { out.textContent = 'Error: ' + e; }
+  });
+  document.getElementById('tw_applyRisky') && document.getElementById('tw_applyRisky').addEventListener('click', async function(){
+    var out = document.getElementById('tw_outRisky'); out.textContent = 'Applying...';
+    var keys = ['AIG_RISKY_MIN_ERR','AIG_RISKY_MAX_ERR','AIG_RISKY_MIN_VIOL','AIG_RISKY_MAX_VIOL','AIG_RISKY_MAX_AGR','AIG_RISKY_LAT_MIN','AIG_RISKY_LAT_MAX'];
+    var ids = ['tw_k1','tw_k2','tw_k3','tw_k4','tw_k5','tw_k6','tw_k7'];
+    var body = { admin_token: adm() };
+    for (var i = 0; i < keys.length; i++) { var v = (document.getElementById(ids[i]) || {}).value; if (v !== undefined && String(v).trim() !== '') body[keys[i]] = v; }
+    try {
+      var r = await fetch('/admin/ai_risky/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      var j = await r.json(); out.textContent = formatAdminResponse(j, r);
+    } catch(e) { out.textContent = 'Error: ' + e; }
+  });
+  document.getElementById('tw_doAuto') && document.getElementById('tw_doAuto').addEventListener('click', async function(){
+    var out = document.getElementById('tw_outAuto'); out.textContent = 'Running...';
+    try {
+      var r = await fetch('/drivers/emergent/autotune', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ admin_token: adm(), steps: parseInt(document.getElementById('tw_steps').value||4,10), iters: parseInt(document.getElementById('tw_iters').value||64,10), seed: parseInt(document.getElementById('tw_seed').value||42,10) }) });
+      var j = await r.json(); out.textContent = formatAdminResponse(j, r);
+    } catch(e) { out.textContent = 'Error: ' + e; }
+  });
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>UDM - Public Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header>
+    <h1>UDM - Public Dashboard</h1>
+    <p class="subtitle">Transparent view of state and reasons - no private details.</p>
+  </header>
+  <main>
+    <section class="cards">
+      <div class="card state">
+        <h2>Current State</h2>
+        <div id="stateBadge" class="badge">LOADING</div>
+        <div class="row"><span>Receipt Hash:</span><code id="hash">-</code></div>
+        <div class="row"><span>Time Window:</span><span id="window">-</span></div>
+      </div>
+      <div class="card drivers">
+        <h2>Drivers (symbolic)</h2>
+        <div class="meter"><label>S (stability)</label><div class="bar"><span id="SBar"></span></div></div>
+        <div class="meter"><label>C (coherence)</label><div class="bar"><span id="CBar"></span></div></div>
+        <div class="meter"><label>P (pressure)</label><div class="bar"><span id="PBar"></span></div></div>
+      </div>
+      <div class="card reasons">
+        <h2>Reasons</h2>
+        <ul id="reasonsList"><li>-</li></ul>
+      </div>
+      <div class="card hysteresis">
+        <h2>Hysteresis</h2>
+        <div class="row"><span>Depth:</span><span id="hDepth">-</span></div>
+        <div class="row"><span>Recent (count):</span><span id="hRecent">-</span></div>
+        <p class="note">UDM waits for calm windows before acting to avoid flicker.</p>
+      </div>
+    </section>
+    <section class="footnote">
+      <p>Sanitized, non-leaking view: no thresholds, keys, allow-lists, or internal code.</p>
+    </section>
+  </main>
+  <footer>
+    <span>UDM Public View - 2026-03-04</span>
+    <button id="refreshBtn" title="Refresh now">Refresh</button>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>
